@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules/
+dist/
+target/
+app/src-tauri/target/
+
+# 日志
+*.log
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 临时截图
+ui-*.png

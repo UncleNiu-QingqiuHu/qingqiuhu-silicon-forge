@@ -1,0 +1,40 @@
+[package]
+name = "qingqiu-silicon-forge"
+version = "0.1.0"
+description = "青丘湖硅基工坊 - 本地文件加工台"
+authors = ["Qingqiu"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "qingqiu_forge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+toml = "0.8"
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+umya-spreadsheet = "2.3.3"
+image = "0.25.6"
+dirs = "7.0.0"
+resvg = "0.45.1"
+kamadak-exif = "0.6.1"
+tauri-plugin-dialog = "2.0.0-rc.8"
+winreg = "0.56.0"
+
+# debug = 1 只保留行号信息。设为 2 时本机编译 window-vibrancy 会出现
+# rustc 0xc0000005 崩溃（并行编译 + 大体积调试信息导致内存耗尽）。
+[profile.dev]
+debug = 1
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

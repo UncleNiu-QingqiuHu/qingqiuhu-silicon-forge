@@ -1,0 +1,358 @@
+# 青丘湖硅基工坊 · 功能状态单一数据源
+#
+# 本文件是功能状态的唯一定义处，build.rs 会解析它并生成 Rust 常量，
+# 前端通过 get_features 命令读取，禁止在代码或 UI 中硬编码功能可用性。
+#
+# status 取值：
+#   committed   - 已排期，按里程碑交付
+#   conditional - 依赖外部前置条件，前置未满足时以占位形式存在
+#   deferred    - 明确延后，不排期，保留能力位
+#   out         - 不做，不出现于界面
+#
+# placeholder 为占位文案，仅在 non-committed 时提供。
+
+# ─── F2 Excel 工作表拆分 ───────────────────────────────
+[[feature]]
+id = "F2-1"
+name = "读取工作表列表"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-2"
+name = "按工作表拆分为独立工作簿"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-3"
+name = "输出命名规则"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-4"
+name = "保留样式与打印设置"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-5"
+name = "跨表引用检测"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-6"
+name = "定义名称跨表检测"
+module = "excel"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F2-7"
+name = "图表数据源跨表检测"
+module = "excel"
+status = "committed"
+milestone = "M2"
+placeholder = "图表 Series 的数据源引用暂无法读取，当前仅提示「含图表」"
+delivered = false
+
+[[feature]]
+id = "F2-8"
+name = "受保护工作簿密码"
+module = "excel"
+status = "committed"
+milestone = "M2"
+placeholder = "受保护工作簿需先解除密码，暂不支持直接处理"
+delivered = false
+
+[[feature]]
+id = "F2-9"
+name = "xls 格式前置转换"
+module = "excel"
+status = "committed"
+milestone = "M3"
+placeholder = "xls 转换依赖 Office 引擎，将在文档转换模块完成后开放"
+delivered = false
+
+[[feature]]
+id = "F2-10"
+name = "批量拆分多个工作簿"
+module = "excel"
+status = "committed"
+milestone = "M2"
+
+# ─── F1 文档格式转换 ──────────────────────────────────
+placeholder = "一次处理多个工作簿将在 M2 提供，当前每次选择一个文件"
+delivered = false
+
+[[feature]]
+id = "F1-1"
+name = "Word 转 PDF"
+module = "convert"
+status = "committed"
+milestone = "M3"
+placeholder = "文档转换模块将在 M3 阶段提供，届时需本机已安装 Office 或 WPS"
+delivered = false
+
+[[feature]]
+id = "F1-2"
+name = "Excel 转 PDF"
+module = "convert"
+status = "committed"
+milestone = "M3"
+placeholder = "文档转换模块将在 M3 阶段提供，届时需本机已安装 Office 或 WPS"
+delivered = false
+
+[[feature]]
+id = "F1-3"
+name = "PPT 转 PDF"
+module = "convert"
+status = "committed"
+milestone = "M3"
+placeholder = "文档转换模块将在 M3 阶段提供，届时需本机已安装 Office 或 WPS"
+delivered = false
+
+[[feature]]
+id = "F1-4"
+name = "PDF 转 Word"
+module = "convert"
+status = "deferred"
+milestone = ""
+placeholder = "该功能已延后，暂不提供"
+delivered = false
+
+[[feature]]
+id = "F1-5"
+name = "PDF 转 Excel"
+module = "convert"
+status = "deferred"
+milestone = ""
+placeholder = "该功能已延后，暂不提供"
+delivered = false
+
+[[feature]]
+id = "F1-6"
+name = "PDF 转 PPT"
+module = "convert"
+status = "deferred"
+milestone = ""
+placeholder = "该功能已延后，暂不提供"
+
+# ─── F3 Markdown ─────────────────────────────────────
+delivered = false
+
+[[feature]]
+id = "F3-1"
+name = "Markdown 编辑"
+module = "markdown"
+status = "committed"
+milestone = "M2"
+placeholder = "Markdown 模块将在 M2 阶段提供"
+delivered = false
+
+[[feature]]
+id = "F3-2"
+name = "实时预览"
+module = "markdown"
+status = "committed"
+milestone = "M2"
+placeholder = "Markdown 模块将在 M2 阶段提供"
+delivered = false
+
+[[feature]]
+id = "F3-5"
+name = "导出 HTML"
+module = "markdown"
+status = "committed"
+milestone = "M2"
+placeholder = "Markdown 模块将在 M2 阶段提供"
+delivered = false
+
+[[feature]]
+id = "F3-6"
+name = "导出 PDF"
+module = "markdown"
+status = "committed"
+milestone = "M2"
+placeholder = "Markdown 模块将在 M2 阶段提供"
+
+# ─── F4 图片处理 ─────────────────────────────────────
+delivered = false
+
+[[feature]]
+id = "F4-1"
+name = "图片格式识别"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-2"
+name = "图片格式转换"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-3"
+name = "批量图片处理"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-4"
+name = "JPEG/WebP 质量设置"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-5"
+name = "尺寸缩放"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-6"
+name = "透明通道铺底"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-8"
+name = "SVG 转位图"
+module = "image"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F4-10"
+name = "移除元数据"
+module = "image"
+status = "committed"
+milestone = "M1"
+
+# ─── F6 托盘与后台 ───────────────────────────────────
+delivered = true
+
+[[feature]]
+id = "F6-1"
+name = "关闭最小化到托盘"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-2"
+name = "后台继续执行任务"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-3"
+name = "托盘双击唤出窗口"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-4"
+name = "托盘右键菜单"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-6"
+name = "关闭行为设置"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-7"
+name = "退出确认提示"
+module = "tray"
+status = "committed"
+milestone = "M1"
+delivered = true
+
+[[feature]]
+id = "F6-9"
+name = "开机自启"
+module = "tray"
+status = "committed"
+milestone = "M1"
+
+# ─── F7 AI 助手（条件性）──────────────────────────────
+delivered = true
+
+[[feature]]
+id = "F7-1"
+name = "AI 助手对话"
+module = "ai"
+status = "conditional"
+milestone = "M5"
+blocked_by = ["PC-1", "PC-2", "PC-3"]
+placeholder = "AI 助手需要内网模型端点就绪后开放"
+delivered = false
+
+[[feature]]
+id = "F7-1b"
+name = "模型端点配置"
+module = "ai"
+status = "conditional"
+milestone = "M5"
+blocked_by = ["PC-1"]
+placeholder = "需要确定内网模型端点后开放配置"
+delivered = false
+
+[[feature]]
+id = "F7-6"
+name = "Office 高级技能"
+module = "ai"
+status = "conditional"
+milestone = "M6"
+blocked_by = ["PC-1", "PC-2"]
+placeholder = "Office 高级技能依赖 AI 助手模块"
+delivered = false
+
+[[feature]]
+id = "F7-7"
+name = "PS 高级技能"
+module = "ai"
+status = "conditional"
+milestone = "M7"
+blocked_by = ["PC-1", "PC-2"]
+placeholder = "PS 高级技能需要 Photoshop 2025 及以上版本"
+delivered = false
+
