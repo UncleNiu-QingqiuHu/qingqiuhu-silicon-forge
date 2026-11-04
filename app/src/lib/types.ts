@@ -67,3 +67,17 @@ export interface ConvertOutcome {
 }
 
 export type CrossRefPolicy = "keep" | "to_value" | "abort";
+
+export interface ExportOptions {
+  format: string;
+  title: string;
+  page_numbers: boolean;
+  out_dir: string | null;
+}
+
+export interface ExportOutcome {
+  path: string;
+  bytes: number;
+  format: string;
+  note: string | null;
+}

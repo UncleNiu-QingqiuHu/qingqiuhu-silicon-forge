@@ -3,7 +3,7 @@
 //! 策略是「复制原文件 → 删掉不要的表 → 另存」，不是「读出数据 → 重新生成」。
 //! 后者会丢失样式、合并单元格、条件格式、图表锚点等，拆出来的文件不能直接用。
 //!
-//! 读取只做一次，之后靠 `Spreadsheet: Clone` 派生，避免 N 个表读 N 次文件
+//! 读取只做一次，之后靠 `Workbook: Clone` 派生，避免 N 个表读 N 次文件
 //! （PRD 5.2 要求 20 个工作表拆分 ≤ 8 秒）。
 
 use std::path::{Path, PathBuf};
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use umya_spreadsheet::reader::xlsx;
 use umya_spreadsheet::writer::xlsx as xlsx_writer;
-use umya_spreadsheet::{Spreadsheet, Worksheet};
+use umya_spreadsheet::{Workbook, Worksheet};
 
 use super::refs::referenced_sheets;
 
@@ -76,7 +76,7 @@ impl CrossRefPolicy {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ExcelError {
-    #[error("无法读取工作簿：{0}")]
+    #[error("无法读取工作簿（可能受密码保护、文件已损坏，或不是有效的 xlsx）：{0}")]
     Read(String),
     #[error("无法写入工作簿：{0}")]
     Write(String),
@@ -113,22 +113,22 @@ pub fn scan(path: &Path) -> Result<WorkbookScan, ExcelError> {
     let book = xlsx::read(path).map_err(|e| ExcelError::Read(e.to_string()))?;
 
     let names: Vec<String> = book
-        .get_sheet_collection()
+        .sheet_collection()
         .iter()
-        .map(|s| s.get_name().to_string())
+        .map(|s| s.name().to_string())
         .collect();
 
     let mut sheets = Vec::with_capacity(names.len());
-    for ws in book.get_sheet_collection() {
-        let own = ws.get_name().to_string();
+    for ws in book.sheet_collection() {
+        let own = ws.name().to_string();
         let mut cross_refs = Vec::new();
         let mut truncated = false;
 
-        for cell in ws.get_cell_collection() {
+        for cell in ws.cells() {
             if !cell.is_formula() {
                 continue;
             }
-            let formula = cell.get_formula();
+            let formula = cell.formula();
             let targets = external_targets(formula, &own, &names);
             if targets.is_empty() {
                 continue;
@@ -138,7 +138,7 @@ pub fn scan(path: &Path) -> Result<WorkbookScan, ExcelError> {
                 break;
             }
             cross_refs.push(CrossRef {
-                cell: cell.get_coordinate().get_coordinate(),
+                cell: cell.coordinate().get_coordinate(),
                 formula: formula.to_string(),
                 targets,
             });
@@ -146,25 +146,25 @@ pub fn scan(path: &Path) -> Result<WorkbookScan, ExcelError> {
 
         sheets.push(SheetInfo {
             name: own,
-            state: ws.get_sheet_state().to_string(),
-            rows: ws.get_highest_row(),
-            cols: ws.get_highest_column(),
-            has_chart: !ws.get_chart_collection().is_empty(),
+            state: ws.sheet_state().to_string(),
+            rows: ws.highest_row(),
+            cols: ws.highest_column(),
+            has_chart: !ws.chart_collection().is_empty(),
             cross_refs,
             truncated,
         });
     }
 
     let mut defined_name_refs = Vec::new();
-    for dn in book.get_defined_names() {
-        let addr = dn.get_address();
+    for dn in book.defined_names() {
+        let addr = dn.address();
         let targets: Vec<String> = referenced_sheets(&addr)
             .into_iter()
             .filter(|t| names.iter().any(|n| n == t))
             .collect();
         if !targets.is_empty() {
             defined_name_refs.push(CrossRef {
-                cell: dn.get_name().to_string(),
+                cell: dn.name().to_string(),
                 formula: addr,
                 targets,
             });
@@ -194,19 +194,19 @@ fn external_targets(formula: &str, own: &str, names: &[String]) -> Vec<String> {
 /// 缓存为空，替换后单元格会变空——这一点由调用方在 UI 上提示用户。
 fn freeze_cross_refs(ws: &mut Worksheet, names: &[String], own: &str) {
     let coords: Vec<String> = ws
-        .get_cell_collection()
+        .cells()
         .iter()
         .filter(|c| c.is_formula())
-        .filter(|c| !external_targets(c.get_formula(), own, names).is_empty())
-        .map(|c| c.get_coordinate().get_coordinate())
+        .filter(|c| !external_targets(c.formula(), own, names).is_empty())
+        .map(|c| c.coordinate().get_coordinate())
         .collect();
 
     for coord in coords {
-        let cached = match ws.get_cell(coord.as_str()) {
-            Some(c) => c.get_value().to_string(),
+        let cached = match ws.cell(coord.as_str()) {
+            Some(c) => c.value().to_string(),
             None => continue,
         };
-        let cell = ws.get_cell_mut(coord.as_str());
+        let cell = ws.cell_mut(coord.as_str());
         cell.set_formula("");
         cell.set_value(cached);
     }
@@ -228,9 +228,9 @@ pub fn split(
 
     let base = xlsx::read(src).map_err(|e| ExcelError::Read(e.to_string()))?;
     let names: Vec<String> = base
-        .get_sheet_collection()
+        .sheet_collection()
         .iter()
-        .map(|s| s.get_name().to_string())
+        .map(|s| s.name().to_string())
         .collect();
 
     for t in targets {
@@ -243,11 +243,11 @@ pub fn split(
     if policy == CrossRefPolicy::Abort {
         for t in targets {
             let has = base
-                .get_sheet_by_name(t)
+                .sheet_by_name(t)
                 .map(|ws| {
-                    ws.get_cell_collection()
+                    ws.cells()
                         .iter()
-                        .any(|c| c.is_formula() && !external_targets(c.get_formula(), t, &names).is_empty())
+                        .any(|c| c.is_formula() && !external_targets(c.formula(), t, &names).is_empty())
                 })
                 .unwrap_or(false);
             if has {
@@ -270,7 +270,7 @@ pub fn split(
     let mut results = Vec::with_capacity(targets.len());
 
     for target in targets {
-        let mut book: Spreadsheet = base.clone();
+        let mut book: Workbook = base.clone();
 
         for name in &names {
             if name != target {
@@ -278,9 +278,9 @@ pub fn split(
             }
         }
 
-        if let Some(ws) = book.get_sheet_by_name_mut(target) {
+        if let Ok(ws) = book.sheet_by_name_mut(target) {
             // 拆出来的表必须可见，否则用户打开文件看不到内容
-            if ws.get_sheet_state() != "visible" {
+            if ws.sheet_state() != "visible" {
                 ws.set_sheet_state("visible".to_string());
             }
             if policy == CrossRefPolicy::ToValue {
@@ -366,18 +366,18 @@ mod tests {
         let src = dir.join("book.xlsx");
 
         let mut book = new_file();
-        if let Some(ws) = book.get_sheet_mut(&0) {
+        if let Ok(ws) = book.get_sheet_mut(&0) {
             ws.set_name("汇总");
-            ws.get_cell_mut("A1").set_formula("明细1!A1");
-            ws.get_cell_mut("B1").set_value("备注");
+            ws.cell_mut("A1").set_formula("明细1!A1");
+            ws.cell_mut("B1").set_value("备注");
         }
         book.new_sheet("明细1")
             .unwrap()
-            .get_cell_mut("A1")
+            .cell_mut("A1")
             .set_value_number(100.0);
         book.new_sheet("明细2")
             .unwrap()
-            .get_cell_mut("A1")
+            .cell_mut("A1")
             .set_value_number(200.0);
         xlsx_writer::write(&book, &src).unwrap();
 
@@ -404,12 +404,12 @@ mod tests {
             assert!(Path::new(&o.path).exists());
             let b = xlsx::read(&o.path).unwrap();
             assert_eq!(
-                b.get_sheet_collection().len(),
+                b.sheet_collection().len(),
                 1,
                 "拆出的文件应只含一个工作表：{}",
                 o.sheet
             );
-            assert_eq!(b.get_sheet_collection()[0].get_name(), o.sheet);
+            assert_eq!(b.sheet_collection()[0].name(), o.sheet);
         }
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -426,13 +426,13 @@ mod tests {
         let src = dir.join("book.xlsx");
 
         let mut book = new_file();
-        if let Some(ws) = book.get_sheet_mut(&0) {
+        if let Ok(ws) = book.get_sheet_mut(&0) {
             ws.set_name("汇总");
-            ws.get_cell_mut("A1").set_formula("明细!A1");
+            ws.cell_mut("A1").set_formula("明细!A1");
         }
         book.new_sheet("明细")
             .unwrap()
-            .get_cell_mut("A1")
+            .cell_mut("A1")
             .set_value_number(1.0);
         xlsx_writer::write(&book, &src).unwrap();
 

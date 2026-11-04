@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   ConvertOptions,
   ConvertOutcome,
+  ExportOptions,
+  ExportOutcome,
   Feature,
   ImageProbe,
   SplitOutcome,
@@ -39,6 +41,18 @@ export const api = {
   getAutostart: () => invoke<boolean>("get_autostart"),
 
   setAutostart: (enable: boolean) => invoke<void>("set_autostart", { enable }),
+
+  readTextFile: (path: string) => invoke<string>("read_text_file", { path }),
+
+  writeTextFile: (path: string, content: string) =>
+    invoke<void>("write_text_file", { path, content }),
+
+  mdPreview: (markdown: string) => invoke<string>("md_preview", { markdown }),
+
+  mdExport: (markdown: string, sourcePath: string | null, options: ExportOptions) =>
+    invoke<ExportOutcome>("md_export", { markdown, sourcePath, options }),
+
+  appVersion: () => invoke<string>("app_version"),
 };
 
 export function errText(e: unknown): string {

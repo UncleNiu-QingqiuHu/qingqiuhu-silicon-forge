@@ -6,6 +6,7 @@ import Placeholder from "./components/Placeholder";
 import ExitDialog from "./components/ExitDialog";
 import ExcelPanel from "./components/ExcelPanel";
 import ImagePanel from "./components/ImagePanel";
+import MarkdownPanel from "./components/MarkdownPanel";
 import SettingsPanel from "./components/SettingsPanel";
 
 const MODULES = [
@@ -25,7 +26,7 @@ type ViewKey = ModuleKey | "settings";
 const DEV_FEATURES: Feature[] = [
   { id: "F1-1", name: "Word 转 PDF", module: "convert", status: "committed", milestone: "M3", placeholder: "文档转换模块将在 M3 阶段提供，需本机已安装 Office 或 WPS", blocked_by: [], delivered: false, available: true },
   { id: "F2-2", name: "按工作表拆分", module: "excel", status: "committed", milestone: "M1", placeholder: null, blocked_by: [], delivered: true, available: true },
-  { id: "F3-1", name: "Markdown 编辑", module: "markdown", status: "committed", milestone: "M2", placeholder: "Markdown 模块将在 M2 阶段提供", blocked_by: [], delivered: false, available: true },
+  { id: "F3-1", name: "Markdown 编辑", module: "markdown", status: "committed", milestone: "M2", placeholder: null, blocked_by: [], delivered: true, available: true },
   { id: "F4-2", name: "图片格式转换", module: "image", status: "committed", milestone: "M1", placeholder: null, blocked_by: [], delivered: true, available: true },
   { id: "F7-1", name: "AI 助手对话", module: "ai", status: "conditional", milestone: "M5", placeholder: "AI 助手需要内网模型端点就绪后开放", blocked_by: ["PC-1", "PC-2", "PC-3"], delivered: false, available: false },
   { id: "F7-7", name: "PS 高级技能", module: "ai", status: "conditional", milestone: "M7", placeholder: "需要 Photoshop 2025 及以上版本", blocked_by: ["PC-1", "PC-2"], delivered: false, available: false },
@@ -41,6 +42,8 @@ function WorkArea({ view, feature, features }: { view: ViewKey; feature?: Featur
       return <ExcelPanel />;
     case "image":
       return <ImagePanel />;
+    case "markdown":
+      return <MarkdownPanel />;
     default:
       return <Placeholder feature={feature} />;
   }
@@ -68,6 +71,14 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(false);
   const [exitRequest, setExitRequest] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [version, setVersion] = useState("0.2.0");
+
+  useEffect(() => {
+    api
+      .appVersion()
+      .then(setVersion)
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -185,11 +196,13 @@ export default function App() {
         </button>
       </nav>
 
-      <main className="work">
-        <div className="work-head">
-          <h1>{isSettings ? "设置" : current?.label}</h1>
-          <p>{isSettings ? "窗口行为与版本信息" : current?.hint}</p>
-        </div>
+      <main className={`work ${view === "markdown" ? "flush" : ""}`}>
+        {view !== "markdown" && (
+          <div className="work-head">
+            <h1>{isSettings ? "设置" : current?.label}</h1>
+            <p>{isSettings ? "窗口行为与版本信息" : current?.hint}</p>
+          </div>
+        )}
         <WorkArea view={view} feature={currentFeature} features={features} />
       </main>
 
@@ -222,7 +235,7 @@ export default function App() {
         </span>
         <span>队列空闲</span>
         <span className="grow" />
-        <span>v0.1.0</span>
+        <span>v{version}</span>
       </footer>
 
       {exitRequest && (

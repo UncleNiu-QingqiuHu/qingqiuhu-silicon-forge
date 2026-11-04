@@ -14,6 +14,8 @@ function fmtSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+type BatchItem = { path: string; scan: WorkbookScan | null; error?: string };
+
 /** 仅开发环境：访问 ?demo=1 时用这份数据预览列表与告警的渲染效果。 */
 const DEMO_SCAN: WorkbookScan = {
   path: "C:\\demo\\季度报表.xlsx",
@@ -38,14 +40,19 @@ const DEMO_SCAN: WorkbookScan = {
 };
 
 export default function ExcelPanel() {
+  // 单文件详情模式
   const [path, setPath] = useState<string | null>(null);
   const [scan, setScan] = useState<WorkbookScan | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [detail, setDetail] = useState<string | null>(null);
+
+  // 多文件批量模式
+  const [batch, setBatch] = useState<BatchItem[]>([]);
+
   const [policy, setPolicy] = useState<CrossRefPolicy>("keep");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SplitOutcome[]>([]);
-  const [detail, setDetail] = useState<string | null>(null);
 
   useEffect(() => {
     if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
@@ -62,25 +69,55 @@ export default function ExcelPanel() {
       .reduce((n, s) => n + s.cross_refs.length, 0);
   }, [scan, picked]);
 
+  const batchRefs = useMemo(
+    () =>
+      batch.reduce(
+        (n, b) =>
+          n + (b.scan?.sheets.reduce((m, s) => m + s.cross_refs.length, 0) ?? 0),
+        0
+      ),
+    [batch]
+  );
+
   async function pickFile() {
     setError(null);
     setResults([]);
+    setBatch([]);
     try {
       const sel = await open({
-        multiple: false,
+        multiple: true,
         filters: [{ name: "Excel 工作簿", extensions: ["xlsx", "xlsm"] }],
       });
-      if (typeof sel !== "string") return;
+      if (!sel) return;
 
-      setPath(sel);
-      setBusy(true);
+      const list = Array.isArray(sel) ? sel : [sel];
+
+      if (list.length === 1) {
+        setPath(list[0]);
+        setBusy(true);
+        setScan(null);
+        const s = await api.excelScan(list[0]);
+        setScan(s);
+        setPicked(new Set(s.sheets.filter((x) => x.state === "visible").map((x) => x.name)));
+        setBusy(false);
+        return;
+      }
+
+      // 批量模式：逐个扫描，单个失败不影响其他
+      setPath(null);
       setScan(null);
-      const s = await api.excelScan(sel);
-      setScan(s);
-      setPicked(new Set(s.sheets.filter((x) => x.state === "visible").map((x) => x.name)));
+      setBusy(true);
+      const items: BatchItem[] = [];
+      for (const p of list) {
+        try {
+          items.push({ path: p, scan: await api.excelScan(p) });
+        } catch (e) {
+          items.push({ path: p, scan: null, error: errText(e) });
+        }
+      }
+      setBatch(items);
     } catch (e) {
       setError(errText(e));
-      setScan(null);
     } finally {
       setBusy(false);
     }
@@ -101,8 +138,7 @@ export default function ExcelPanel() {
     setError(null);
     setResults([]);
     try {
-      const out = await api.excelSplit(path, [...picked], null, policy);
-      setResults(out);
+      setResults(await api.excelSplit(path, [...picked], null, policy));
     } catch (e) {
       setError(errText(e));
     } finally {
@@ -110,13 +146,42 @@ export default function ExcelPanel() {
     }
   }
 
-  function refSummary(s: SheetInfo) {
+  async function doSplitBatch() {
+    const usable = batch.filter((b) => b.scan);
+    if (usable.length === 0) return;
+    setBusy(true);
+    setError(null);
+    setResults([]);
+
+    const all: SplitOutcome[] = [];
+    const failures: string[] = [];
+
+    for (const item of usable) {
+      const sheets = (item.scan?.sheets ?? [])
+        .filter((s) => s.state === "visible")
+        .map((s) => s.name);
+      if (sheets.length === 0) continue;
+      try {
+        const out = await api.excelSplit(item.path, sheets, null, policy);
+        all.push(...out);
+      } catch (e) {
+        failures.push(`${baseName(item.path)}：${errText(e)}`);
+      }
+    }
+
+    setResults(all);
+    if (failures.length > 0) setError(failures.join("\n"));
+    setBusy(false);
+  }
+
+  function refTargets(s: SheetInfo) {
     const targets = new Set<string>();
     s.cross_refs.forEach((r) => r.targets.forEach((t) => targets.add(t)));
     return [...targets];
   }
 
-  if (!scan) {
+  // ── 空态 ─────────────────────────────
+  if (!scan && batch.length === 0) {
     return (
       <>
         <div className="dropzone" onClick={pickFile}>
@@ -125,9 +190,9 @@ export default function ExcelPanel() {
             <i />
             <i />
           </div>
-          <b>选择一个 Excel 工作簿</b>
-          <span>按工作表拆成多个独立文件，保留样式与打印设置</span>
-          <span className="dz-hint">支持 .xlsx / .xlsm</span>
+          <b>选择一个或多个 Excel 工作簿</b>
+          <span>按工作表拆成独立文件，保留样式与打印设置</span>
+          <span className="dz-hint">支持 .xlsx / .xlsm · 可多选批量处理</span>
         </div>
         {error && <div className="error-box">{error}</div>}
         {busy && <div className="muted center">正在读取工作簿…</div>}
@@ -135,6 +200,79 @@ export default function ExcelPanel() {
     );
   }
 
+  // ── 批量模式 ─────────────────────────
+  if (batch.length > 0) {
+    const totalSheets = batch.reduce(
+      (n, b) => n + (b.scan?.sheets.filter((s) => s.state === "visible").length ?? 0),
+      0
+    );
+
+    return (
+      <>
+        <div className="card">
+          <div className="card-head">
+            <div className="file-title">已选择 {batch.length} 个工作簿</div>
+            <div className="card-head-right">
+              <span className="muted small">共 {totalSheets} 个可见工作表</span>
+              <button className="ghost" onClick={pickFile}>
+                重选
+              </button>
+            </div>
+          </div>
+          <div className="result-list">
+            {batch.map((b) => {
+              const visible = b.scan?.sheets.filter((s) => s.state === "visible") ?? [];
+              const hidden = b.scan?.sheets.filter((s) => s.state !== "visible") ?? [];
+              const refs =
+                b.scan?.sheets.reduce((m, s) => m + s.cross_refs.length, 0) ?? 0;
+              return (
+                <div key={b.path} className="result-row">
+                  <span className={`st-dot ${b.error ? "err" : "ok"}`} />
+                  <span className="result-name" title={b.path}>
+                    {baseName(b.path)}
+                  </span>
+                  {b.error ? (
+                    <span className="muted small">{b.error}</span>
+                  ) : (
+                    <span className="muted small">
+                      {visible.length} 个可见表
+                      {hidden.length > 0 ? ` · ${hidden.length} 个隐藏表不拆` : ""}
+                      {refs > 0 ? ` · 跨表引用 ${refs}` : ""}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {batchRefs > 0 && (
+          <div className="warn-box">
+            <b>其中有 {batchRefs} 处跨表引用</b>
+            <p>拆分后这些公式无法再访问其他工作表，请选择处理方式：</p>
+            <PolicyPicker policy={policy} setPolicy={setPolicy} />
+          </div>
+        )}
+
+        <div className="actions-bar">
+          <span className="muted small">每个文件输出到各自所在目录</span>
+          <span className="grow" />
+          <button
+            className="primary"
+            disabled={busy || totalSheets === 0}
+            onClick={doSplitBatch}
+          >
+            {busy ? "处理中…" : `拆分全部 ${totalSheets} 个工作表`}
+          </button>
+        </div>
+
+        {error && <div className="error-box" style={{ whiteSpace: "pre-line" }}>{error}</div>}
+        <ResultList results={results} />
+      </>
+    );
+  }
+
+  // ── 单文件详情模式 ────────────────────
   return (
     <>
       <div className="card">
@@ -143,7 +281,7 @@ export default function ExcelPanel() {
             {path ? baseName(path) : ""}
           </div>
           <div className="card-head-right">
-            <span className="muted">{scan.sheet_count} 个工作表</span>
+            <span className="muted">{scan!.sheet_count} 个工作表</span>
             <button className="ghost" onClick={pickFile}>
               换一个
             </button>
@@ -151,8 +289,8 @@ export default function ExcelPanel() {
         </div>
 
         <div className="sheet-list">
-          {scan.sheets.map((s) => {
-            const targets = refSummary(s);
+          {scan!.sheets.map((s) => {
+            const targets = refTargets(s);
             const isOpen = detail === s.name;
             return (
               <div key={s.name} className={`sheet-row ${picked.has(s.name) ? "on" : ""}`}>
@@ -173,10 +311,7 @@ export default function ExcelPanel() {
                   </span>
                 </label>
                 {s.cross_refs.length > 0 && (
-                  <button
-                    className="link"
-                    onClick={() => setDetail(isOpen ? null : s.name)}
-                  >
+                  <button className="link" onClick={() => setDetail(isOpen ? null : s.name)}>
                     {isOpen ? "收起" : `查看 → ${targets.join("、")}`}
                   </button>
                 )}
@@ -202,12 +337,12 @@ export default function ExcelPanel() {
         </div>
       </div>
 
-      {scan.defined_name_refs.length > 0 && (
+      {scan!.defined_name_refs.length > 0 && (
         <div className="warn-box">
-          <b>定义名称中存在 {scan.defined_name_refs.length} 处跨表引用</b>
+          <b>定义名称中存在 {scan!.defined_name_refs.length} 处跨表引用</b>
           <p>拆分后这些名称可能失效，Excel 可能提示链接错误。</p>
           <div className="ref-detail">
-            {scan.defined_name_refs.slice(0, 6).map((d) => (
+            {scan!.defined_name_refs.slice(0, 6).map((d) => (
               <div key={d.cell} className="ref-line">
                 <code>{d.cell}</code>
                 <span> → {d.targets.join("、")}</span>
@@ -221,70 +356,82 @@ export default function ExcelPanel() {
         <div className="warn-box">
           <b>选中的工作表含 {pickedWithRefs} 处跨表引用</b>
           <p>拆分后这些公式无法再访问其他工作表，请选择处理方式：</p>
-          <div className="radio-row">
-            <label>
-              <input
-                type="radio"
-                name="policy"
-                checked={policy === "keep"}
-                onChange={() => setPolicy("keep")}
-              />
-              保留公式<span className="muted">（可能出现 #REF!）</span>
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="policy"
-                checked={policy === "to_value"}
-                onChange={() => setPolicy("to_value")}
-              />
-              转为当前值<span className="muted">（需文件曾被 Office 保存过）</span>
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="policy"
-                checked={policy === "abort"}
-                onChange={() => setPolicy("abort")}
-              />
-              中止拆分
-            </label>
-          </div>
+          <PolicyPicker policy={policy} setPolicy={setPolicy} />
         </div>
       )}
 
       <div className="actions-bar">
         <span className="muted small">输出到源文件所在目录</span>
         <span className="grow" />
-        <button
-          className="primary"
-          disabled={picked.size === 0 || busy}
-          onClick={doSplit}
-        >
+        <button className="primary" disabled={picked.size === 0 || busy} onClick={doSplit}>
           {busy ? "处理中…" : `拆分 ${picked.size} 个工作表`}
         </button>
       </div>
 
       {error && <div className="error-box">{error}</div>}
-
-      {results.length > 0 && (
-        <div className="card">
-          <div className="card-head">
-            <div className="file-title">已生成 {results.length} 个文件</div>
-          </div>
-          <div className="result-list">
-            {results.map((r) => (
-              <div key={r.path} className="result-row">
-                <span className="ok-dot" />
-                <span className="result-name" title={r.path}>
-                  {baseName(r.path)}
-                </span>
-                <span className="muted small">{fmtSize(r.bytes)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <ResultList results={results} />
     </>
+  );
+}
+
+function PolicyPicker({
+  policy,
+  setPolicy,
+}: {
+  policy: CrossRefPolicy;
+  setPolicy: (p: CrossRefPolicy) => void;
+}) {
+  return (
+    <div className="radio-row">
+      <label>
+        <input
+          type="radio"
+          name="policy"
+          checked={policy === "keep"}
+          onChange={() => setPolicy("keep")}
+        />
+        保留公式<span className="muted">（可能出现 #REF!）</span>
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="policy"
+          checked={policy === "to_value"}
+          onChange={() => setPolicy("to_value")}
+        />
+        转为当前值<span className="muted">（需文件曾被 Office 保存过）</span>
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="policy"
+          checked={policy === "abort"}
+          onChange={() => setPolicy("abort")}
+        />
+        中止拆分
+      </label>
+    </div>
+  );
+}
+
+function ResultList({ results }: { results: SplitOutcome[] }) {
+  if (results.length === 0) return null;
+  return (
+    <div className="card">
+      <div className="card-head">
+        <div className="file-title">已生成 {results.length} 个文件</div>
+      </div>
+      <div className="result-list">
+        {results.map((r) => (
+          <div key={r.path} className="result-row">
+            <span className="ok-dot" />
+            <span className="result-name" title={r.path}>
+              {baseName(r.path)}
+            </span>
+            <span className="muted small">{fmtSize(r.bytes)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

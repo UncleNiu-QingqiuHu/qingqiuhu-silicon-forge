@@ -5,6 +5,7 @@ import type { Feature } from "../lib/types";
 export default function SettingsPanel({ features }: { features: Feature[] }) {
   const [closeToTray, setCloseToTray] = useState(true);
   const [autostart, setAutostart] = useState(false);
+  const [version, setVersion] = useState("0.2.0");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,6 +19,10 @@ export default function SettingsPanel({ features }: { features: Feature[] }) {
     api
       .getAutostart()
       .then(setAutostart)
+      .catch(() => undefined);
+    api
+      .appVersion()
+      .then(setVersion)
       .catch(() => undefined);
   }, []);
 
@@ -120,7 +125,7 @@ export default function SettingsPanel({ features }: { features: Feature[] }) {
         </div>
         <div className="opt-row">
           <span className="opt-label">版本</span>
-          <span className="small">0.1.0</span>
+          <span className="small">v{version}</span>
         </div>
         <div className="opt-row">
           <span className="opt-label">引擎</span>

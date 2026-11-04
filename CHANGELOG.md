@@ -16,13 +16,21 @@
 
 ### 变更
 
-- 技术栈整体升级至最新：React 19、Vite 8、TypeScript 7、umya-spreadsheet 3
+- 技术栈整体升级至最新：React 19、Vite 8、TypeScript 7、umya-spreadsheet 3、typst 0.15、comrak 0.59
+- umya-spreadsheet 全量迁移至新版接口（`Workbook`、`cells()`、`sheet_by_name()` 等），无废弃 API 残留
 - 界面版本号改为从应用元信息读取，不再硬编码
+
+### 技术
+
+- 自动化测试从 20 项增至 36 项，新增 Markdown → Typst → PDF 的端到端验证
+- MSRV 提升至 Rust 1.90，以使用各依赖的最新稳定版本
+- Vite 8 改用 rolldown 打包，构建耗时从约 800ms 降至约 1s 内
 
 ### 已知问题
 
 - 图表数据源跨表引用仍无法检测（底层库不暴露 Series 引用），界面仅提示「含图表」
 - WebP 输出为无损编码，质量参数不生效
+- Markdown 中的脚注正文暂不渲染
 
 ## [0.1.0] - 2026-11-04
 

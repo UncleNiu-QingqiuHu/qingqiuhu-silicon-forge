@@ -1,6 +1,7 @@
 mod excel;
 mod features;
 mod imagetool;
+mod markdown;
 mod tray;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -27,6 +28,30 @@ fn get_close_behavior() -> bool {
 #[tauri::command]
 fn hide_to_tray(window: tauri::Window) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
+}
+
+/// 应用版本号，从构建元信息读取，避免在界面里硬编码。
+#[tauri::command]
+fn app_version(app: tauri::AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// 读取文本文件（仅 UTF-8）。用于 Markdown 打开。
+#[tauri::command]
+fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path)
+        .map_err(|e| format!("无法读取文件（仅支持 UTF-8 编码）：{e}"))
+}
+
+/// 写入文本文件。用于 Markdown 保存。
+#[tauri::command]
+fn write_text_file(path: String, content: String) -> Result<(), String> {
+    if let Some(dir) = std::path::Path::new(&path).parent() {
+        if !dir.exists() {
+            std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        }
+    }
+    std::fs::write(&path, content).map_err(|e| format!("无法写入文件：{e}"))
 }
 
 /// 开机自启：写在 HKCU 的 Run 键下，不需要管理员权限（PRD F6-9）。
@@ -94,12 +119,17 @@ pub fn run() {
             excel::excel_split,
             imagetool::image_probe,
             imagetool::image_convert,
+            markdown::md_preview,
+            markdown::md_export,
             confirm_exit,
             set_close_behavior,
             get_close_behavior,
             hide_to_tray,
             get_autostart,
             set_autostart,
+            read_text_file,
+            write_text_file,
+            app_version,
         ])
         .setup(|app| {
             tray::setup(app)?;

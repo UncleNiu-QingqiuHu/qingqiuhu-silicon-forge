@@ -13,5 +13,7 @@ export default defineConfig({
     target: "chrome110",
     minify: "esbuild",
     sourcemap: false,
+    // 桌面应用从本地磁盘加载资源，不走网络，单包体积不是瓶颈
+    chunkSizeWarningLimit: 1200,
   },
 });
