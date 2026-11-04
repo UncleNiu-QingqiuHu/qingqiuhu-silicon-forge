@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api, errText } from "./lib/api";
-import type { Feature } from "./lib/types";
+import type { Feature, UpdateInfo } from "./lib/types";
 import Placeholder from "./components/Placeholder";
 import ExitDialog from "./components/ExitDialog";
 import ExcelPanel from "./components/ExcelPanel";
@@ -71,13 +71,38 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(false);
   const [exitRequest, setExitRequest] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
-  const [version, setVersion] = useState("0.2.0");
+  const [version, setVersion] = useState("");
+  const [configFatal, setConfigFatal] = useState<string | null>(null);
+  const [updateBanner, setUpdateBanner] = useState<UpdateInfo | null>(null);
 
   useEffect(() => {
     api
       .appVersion()
       .then(setVersion)
       .catch(() => undefined);
+  }, []);
+
+  // 配置拒绝启动（schemaVersion 高于程序）时阻断；否则按设置做一次启动检查。
+  useEffect(() => {
+    (async () => {
+      try {
+        const blocked = await api.getConfigFatal();
+        if (blocked) {
+          setConfigFatal(blocked);
+          return;
+        }
+      } catch {
+        return; // 纯浏览器调试环境没有后端
+      }
+      try {
+        const cfg = await api.getAppConfig();
+        if (!cfg.checkUpdateOnStart) return;
+        const info = await api.checkUpdate();
+        if (info.available) setUpdateBanner(info);
+      } catch {
+        // 启动检查失败不打扰用户，设置页可手动检查
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -139,6 +164,20 @@ export default function App() {
 
   if (!loaded) return <div className="app" />;
 
+  if (configFatal) {
+    return (
+      <div className="app">
+        <main className="work" style={{ gridColumn: "1 / -1" }}>
+          <div className="error-box">{configFatal}</div>
+          <p className="muted small" style={{ marginTop: 12 }}>
+            配置文件未被改动。请升级到新版本后再运行，或用旧版本备份的
+            config.v*.bak 手动恢复。
+          </p>
+        </main>
+      </div>
+    );
+  }
+
   if (fatal) {
     return (
       <div className="app">
@@ -197,6 +236,20 @@ export default function App() {
       </nav>
 
       <main className={`work ${view === "markdown" ? "flush" : ""}`}>
+        {updateBanner && (
+          <div className="update-banner">
+            <span>
+              发现新版本 <b>v{updateBanner.version}</b>
+            </span>
+            <span className="grow" />
+            <button className="chip on" onClick={() => setView("settings")}>
+              去更新
+            </button>
+            <button className="chip" onClick={() => setUpdateBanner(null)}>
+              稍后
+            </button>
+          </div>
+        )}
         {view !== "markdown" && (
           <div className="work-head">
             <h1>{isSettings ? "设置" : current?.label}</h1>

@@ -722,6 +722,49 @@ input[type="range"] {
   border-color: var(--accent);
 }
 
+.input.wide {
+  flex: 1;
+  width: auto;
+  max-width: 420px;
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  color: #eafdfa;
+  font-size: 12.5px;
+}
+
+.btn {
+  padding: 5px 14px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: #eafdfa;
+}
+
 .color-input {
   width: 36px;
   height: 26px;

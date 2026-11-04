@@ -350,3 +350,67 @@ blocked_by = ["PC-1", "PC-2"]
 placeholder = "PS 高级技能需要 Photoshop 2025 及以上版本"
 delivered = false
 
+# ─── F8 分发与运维（M4）─────────────────────────────
+[[feature]]
+id = "F8-1"
+name = "安装包（NSIS + MSI）"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-2"
+name = "自签名代码签名"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-3"
+name = "自动更新检查"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-4"
+name = "更新包 minisign 校验"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-5"
+name = "更新源可配置"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-6"
+name = "更新失败版本回退"
+module = "dist"
+status = "deferred"
+placeholder = "更新失败目前依赖安装程序自身回退，显式的版本回退与配置恢复向导尚未提供"
+delivered = false
+
+[[feature]]
+id = "F8-7"
+name = "关于页构建信息"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true
+
+[[feature]]
+id = "F8-8"
+name = "灰度通道（stable / beta）"
+module = "dist"
+status = "committed"
+milestone = "M4"
+delivered = true

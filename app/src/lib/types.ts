@@ -1,5 +1,26 @@
 export type FeatureStatus = "committed" | "conditional" | "deferred" | "out";
 
+export type UpdateChannel = "stable" | "beta";
+
+/** 持久化配置，字段与 Rust 侧 AppConfig 一一对应（PRD 7.9.3）。 */
+export interface AppConfig {
+  schemaVersion: number;
+  closeToTray: boolean;
+  updateChannel: UpdateChannel;
+  updateEndpoint: string | null;
+  checkUpdateOnStart: boolean;
+}
+
+export interface UpdateInfo {
+  available: boolean;
+  currentVersion: string;
+  version: string | null;
+  notes: string | null;
+  date: string | null;
+  /** 本次实际使用的更新源，便于核对连的是哪个地址 */
+  endpoint: string;
+}
+
 export interface Feature {
   id: string;
   name: string;

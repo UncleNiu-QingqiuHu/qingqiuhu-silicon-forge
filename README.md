@@ -73,8 +73,51 @@ pnpm tauri dev
     ├── src/                  前端
     └── src-tauri/
         ├── features.toml     功能状态单一数据源
+        ├── scripts/          签名证书生成与构建期签名脚本
         └── src/              Rust 后端
 ```
+
+## 打包与签名
+
+安装包用自签名证书签（内部工具，没有公网代码签名证书）。
+
+**首次准备**：生成代码签名证书，把指纹设为环境变量。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File app\src-tauri\scripts\gen-signing-cert.ps1
+setx QINGQIUHU_CERT_THUMBPRINT "<上一步打印的指纹>"
+```
+
+证书写入当前用户个人存储，有效期 5 年，**私钥不出证书存储**。换机器需重新生成或导入同一份 `.pfx`。
+
+**构建**：
+
+```bash
+cd app
+set TAURI_SIGNING_PRIVATE_KEY=C:\Users\<你>\.tauri\qingqiuhu.key   # 更新包签名私钥（minisign）
+pnpm tauri build
+```
+
+产物在 `app/src-tauri/target/release/bundle/`：NSIS `.exe` 与 MSI `.msi`，以及用于自动更新的 `.sig`。
+
+- **未设置 `QINGQIUHU_CERT_THUMBPRINT` 时不会签名**，构建会明确打印「跳过签名」，产物仅供本机测试
+- 公共时间戳服务器在内网通常不可达，签名脚本会自动退化为「不带时间戳」并提示。不带时间戳的签名在证书有效期内有效，**证书到期后已分发的安装包签名会随之失效**，续签要提前规划
+- 自签证书未推进受信任根的机器，安装时仍会提示「未知发布者」。把 `-ExportCer` 导出的 `.cer` 交给 IT 走 GPO 即可消除
+
+## 自动更新
+
+- 更新包用 **minisign** 签名，公钥写死在 `tauri.conf.json` 的 `plugins.updater.pubkey`
+- 更新源默认 `https://updates.qingqiuhu.com/forge/{stable|beta}/latest.json`，**内网实际地址待定**，可在设置页改成内网静态文件服务地址
+- 更新源的目录结构（静态文件服务即可）：
+
+```
+stable/latest.json      当前版本元信息
+stable/<安装包与 .sig>   与 latest.json 里的 url 对应
+```
+
+- 启动时静默检查（可在设置页关掉），发现新版本只提示，不自动安装
+- 私钥 `~/.tauri/qingqiuhu.key` **不要提交、不要共享**；丢了就无法发布更新（已装版本会因签名不匹配拒绝更新）
+
 
 ## 版本路线
 
@@ -82,8 +125,8 @@ pnpm tauri dev
 |---|---|---|
 | M1 | 骨架、托盘常驻、Excel 拆表、图片转换、设置页 | 已交付 |
 | M2 | Markdown 编辑导出、Excel 批量拆分 | 已交付 |
-| M3 | 文档转 PDF、引擎探测、转换自检、样本库 | 规划中 |
-| M4 | 自签名安装包、自动更新、配置迁移 | 规划中 |
+| M3 | 文档转 PDF、引擎探测、转换自检、样本库 | 暂缓（开发机引擎前置未就绪） |
+| M4 | 自签名安装包、自动更新、配置迁移 | 已交付 |
 | M5–M7 | AI 助手、Office 高级技能、PS 高级技能 | 条件性，待内网模型就绪 |
 
 ## 已知限制

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AppConfig,
   ConvertOptions,
   ConvertOutcome,
   ExportOptions,
@@ -7,6 +8,8 @@ import type {
   Feature,
   ImageProbe,
   SplitOutcome,
+  UpdateChannel,
+  UpdateInfo,
   WorkbookScan,
   CrossRefPolicy,
 } from "./types";
@@ -53,6 +56,22 @@ export const api = {
     invoke<ExportOutcome>("md_export", { markdown, sourcePath, options }),
 
   appVersion: () => invoke<string>("app_version"),
+
+  getAppConfig: () => invoke<AppConfig>("get_app_config"),
+
+  getConfigFatal: () => invoke<string | null>("get_config_fatal"),
+
+  checkUpdate: () => invoke<UpdateInfo>("check_update"),
+
+  installUpdate: () => invoke<void>("install_update"),
+
+  setUpdateChannel: (channel: UpdateChannel) =>
+    invoke<void>("set_update_channel", { channel }),
+
+  setUpdateEndpoint: (endpoint: string) =>
+    invoke<void>("set_update_endpoint", { endpoint }),
+
+  setCheckOnStart: (enable: boolean) => invoke<void>("set_check_on_start", { enable }),
 };
 
 export function errText(e: unknown): string {

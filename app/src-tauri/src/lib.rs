@@ -1,14 +1,32 @@
+mod config;
 mod excel;
 mod features;
 mod imagetool;
 mod markdown;
 mod tray;
+mod updater;
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager, WindowEvent};
 
-/// 关闭按钮行为：true = 最小化到托盘（默认），false = 走退出确认流程。
-static CLOSE_TO_TRAY: AtomicBool = AtomicBool::new(true);
+// 依赖清单在构建期从 Cargo.toml 生成，关于页直接展示，避免手写清单与真实依赖脱节。
+include!(concat!(env!("OUT_DIR"), "/deps_generated.rs"));
+
+#[derive(serde::Serialize)]
+pub struct BuildInfo {
+    pub version: String,
+    pub build_time: &'static str,
+    /// (依赖名, 版本要求)
+    pub deps: &'static [(&'static str, &'static str)],
+}
+
+#[tauri::command]
+fn app_build_info(app: tauri::AppHandle) -> BuildInfo {
+    BuildInfo {
+        version: app.package_info().version.to_string(),
+        build_time: env!("BUILD_TIME"),
+        deps: DEPS,
+    }
+}
 
 #[tauri::command]
 fn confirm_exit(app: tauri::AppHandle) {
@@ -16,13 +34,28 @@ fn confirm_exit(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn set_close_behavior(to_tray: bool) {
-    CLOSE_TO_TRAY.store(to_tray, Ordering::Relaxed);
+fn get_app_config(
+    state: tauri::State<config::ConfigState>,
+) -> Result<config::AppConfig, String> {
+    state.config.lock().map(|c| c.clone()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn get_close_behavior() -> bool {
-    CLOSE_TO_TRAY.load(Ordering::Relaxed)
+fn set_close_behavior(state: tauri::State<config::ConfigState>, to_tray: bool) -> Result<(), String> {
+    let mut cfg = state.config.lock().map_err(|e| e.to_string())?;
+    cfg.close_to_tray = to_tray;
+    config::save(&config::default_dir(), &cfg).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_close_behavior(state: tauri::State<config::ConfigState>) -> bool {
+    state.config.lock().map(|c| c.close_to_tray).unwrap_or(true)
+}
+
+/// 配置拒绝启动时的阻断信息（PRD 7.9.3：文件版本高于程序版本）。
+#[tauri::command]
+fn get_config_fatal(state: tauri::State<config::ConfigState>) -> Option<String> {
+    state.fatal.clone()
 }
 
 #[tauri::command]
@@ -113,6 +146,9 @@ fn set_autostart(enable: bool) -> Result<(), String> {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             features::get_features,
             excel::excel_scan,
@@ -122,8 +158,16 @@ pub fn run() {
             markdown::md_preview,
             markdown::md_export,
             confirm_exit,
+            get_app_config,
+            app_build_info,
+            updater::check_update,
+            updater::install_update,
+            updater::set_update_channel,
+            updater::set_update_endpoint,
+            updater::set_check_on_start,
             set_close_behavior,
             get_close_behavior,
+            get_config_fatal,
             hide_to_tray,
             get_autostart,
             set_autostart,
@@ -132,6 +176,8 @@ pub fn run() {
             app_version,
         ])
         .setup(|app| {
+            let state = config::ConfigState::from_load(config::load(&config::default_dir()));
+            app.manage(state);
             tray::setup(app)?;
             Ok(())
         })
@@ -140,7 +186,14 @@ pub fn run() {
                 // 关闭永不直接退进程（F6-1 / F6-7）：
                 // 默认隐藏到托盘，若用户设置了「直接退出」则转交前端确认。
                 api.prevent_close();
-                if CLOSE_TO_TRAY.load(Ordering::Relaxed) {
+                let to_tray = window
+                    .app_handle()
+                    .state::<config::ConfigState>()
+                    .config
+                    .lock()
+                    .map(|c| c.close_to_tray)
+                    .unwrap_or(true);
+                if to_tray {
                     let _ = window.hide();
                 } else {
                     let _ = window.app_handle().emit("forge://request-exit", ());

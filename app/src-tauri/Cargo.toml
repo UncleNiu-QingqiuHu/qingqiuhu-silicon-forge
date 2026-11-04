@@ -1,6 +1,6 @@
 [package]
 name = "qingqiuhu-silicon-forge"
-version = "0.2.1"
+version = "0.3.0"
 description = "青丘湖硅基工坊 - 本地文件加工台"
 authors = ["Qingqiuhu"]
 edition = "2021"
@@ -31,6 +31,8 @@ base64 = "0.23.1"
 typst = "0.15"
 typst-pdf = "0.15"
 typst-layout = "0.15"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-process = "2.4.0"
 
 # debug = 1 只保留行号信息。设为 2 时本机编译 window-vibrancy 会出现
 # rustc 0xc0000005 崩溃（并行编译 + 大体积调试信息导致内存耗尽）。

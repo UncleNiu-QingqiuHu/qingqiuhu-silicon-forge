@@ -18,3 +18,13 @@ ui-*.png
 
 # 本地工作区数据（开发笔记、AI 会话记忆），不入代码库
 .workbuddy/
+
+# 签名私钥与证书：绝不入库
+*.key
+*.pfx
+*.p12
+*.cer
+
+# 构建期日志
+build.log
+build-release.log

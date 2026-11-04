@@ -70,5 +70,52 @@ fn main() {
         .join("features_generated.rs");
     fs::write(dest, code).expect("写出 features_generated.rs 失败");
 
+    // 构建信息（PRD F8-7）：构建时间与依赖清单直接进二进制，关于页无需联网即可展示
+    println!("cargo:rustc-env=BUILD_TIME={}", build_time());
+    println!("cargo:rerun-if-changed=Cargo.toml");
+
+    let mut deps_code =
+        String::from("// 由 build.rs 自动生成，请勿手改。源: Cargo.toml [dependencies]\n");
+    deps_code.push_str("pub static DEPS: &[(&str, &str)] = &[\n");
+    if let Ok(raw) = fs::read_to_string("Cargo.toml") {
+        if let Ok(doc) = raw.parse::<toml::Value>() {
+            if let Some(table) = doc.get("dependencies").and_then(|v| v.as_table()) {
+                let mut names: Vec<&String> = table.keys().collect();
+                names.sort();
+                for name in names {
+                    let ver = match &table[name] {
+                        toml::Value::String(s) => s.clone(),
+                        v => v
+                            .get("version")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                    };
+                    deps_code.push_str(&format!("    (\"{}\", \"{}\"),\n", esc(name), esc(&ver)));
+                }
+            }
+        }
+    }
+    deps_code.push_str("];\n");
+    let deps_dest = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR 未设置"))
+        .join("deps_generated.rs");
+    fs::write(deps_dest, deps_code).expect("写出 deps_generated.rs 失败");
+
     tauri_build::build()
+}
+
+/// 构建时间用系统本地时间，不额外引入时间库。
+fn build_time() -> String {
+    let out = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-Date -Format 'yyyy-MM-dd HH:mm'",
+        ])
+        .output();
+    match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        _ => "未知".to_string(),
+    }
 }
