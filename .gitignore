@@ -15,3 +15,6 @@ Thumbs.db
 
 # 临时截图
 ui-*.png
+
+# 本地工作区数据（开发笔记、AI 会话记忆），不入代码库
+.workbuddy/
