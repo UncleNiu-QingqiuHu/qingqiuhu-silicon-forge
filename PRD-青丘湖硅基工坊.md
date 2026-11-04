@@ -2,14 +2,14 @@
 
 | 项目 | 内容 |
 |---|---|
-| 产品名称 | 青丘湖硅基工坊（Qingqiu Silicon Forge） |
-| 文档版本 | v0.7（M2 已交付） |
+| 产品名称 | 青丘湖硅基工坊（Qingqiuhu Silicon Forge） |
+| 文档版本 | v0.8（内部标识统一） |
 | 最后更新 | 2026-11-04 |
 | 状态 | M1–M4 已排期，可进入开发 |
 | 目标平台 | Windows 10 1809+ / Windows 11，x64 |
-| 技术栈 | Tauri 2 + Rust + React 18 + TypeScript + .NET 10（sidecar） |
+| 技术栈 | Tauri 2 + Rust + React 19 + TypeScript 7 + .NET 10（sidecar） |
 | 使用范围 | 公司内部，单机本地处理 |
-| 内部标识 | `qingqiu-silicon-forge`，安装目录 `%ProgramFiles%\QingqiuSiliconForge\` |
+| 内部标识 | `qingqiuhu-silicon-forge`，安装目录 `%ProgramFiles%\QingqiuhuSiliconForge\` |
 
 > 变更记录
 > - v0.1 2026-11-04 初稿：四模块范围、混装引擎矩阵、分发与更新
@@ -19,6 +19,7 @@
 > - v0.5 2026-11-04 **待确认项收敛**：样本库策略定稿（默认不存源文件）；中文字体内置；托盘交互明确为「最小化永远允许 + 退出必须提示」，并确立「后台继续执行」承诺
 > - v0.6 2026-11-04 **M1 交付**：骨架 + 托盘 + Excel 拆表 + 图片转换 + 设置页完成，20 项测试通过；样本库顺延至 M3（触发点在转换自检，M1 无实际触发场景）
 > - v0.7 2026-11-04 **M2 交付**：Markdown 编辑与导出（HTML/PDF，品牌页眉）完成；Excel 批量拆分与受保护工作簿提示补齐；技术栈升级至最新（React 19 / Vite 8 / TS 7 / umya 3 / typst 0.15）；36 项测试通过
+> - v0.8 2026-11-04 **内部标识统一**：品牌名拼音修正为 `qingqiuhu`（原缺 `hu`），仓库、包名、可执行文件名、自启注册表键名、安装与数据目录全部对齐；技术栈描述同步为当前实际版本
 
 ---
 
@@ -454,8 +455,8 @@ Agent 循环：最多 **8 轮**；同一工具连续调用 ≥3 次终止；总�
 | 安装包体积 | ≤ 90MB（pdfium ~8MB + 中文字体子集 ~12MB + .NET sidecar ~25MB） |
 | **中文字体** | **内置**思源黑体子集（~12MB），不依赖系统字体，保证 Markdown 导出与 PDF 自检结果一致 |
 | 捆绑 LibreOffice | 否 |
-| 安装位置 | `%ProgramFiles%\QingqiuSiliconForge\` |
-| 用户数据 | `%APPDATA%\QingqiuSiliconForge\`（配置、日志、审计、样本库） |
+| 安装位置 | `%ProgramFiles%\QingqiuhuSiliconForge\` |
+| 用户数据 | `%APPDATA%\QingqiuhuSiliconForge\`（配置、日志、审计、样本库） |
 | 权限 | 运行不需管理员；仅安装需要 |
 
 ### 5.4 安全与合规
@@ -464,7 +465,7 @@ Agent 循环：最多 **8 轮**；同一工具连续调用 ≥3 次终止；总�
 - 不注册全局右键菜单、不写系统目录
 - 日志不记录文件内容
 - API Key 存凭据管理器
-- 临时文件 `%TEMP%\QingqiuSiliconForge\`，任务结束清理
+- 临时文件 `%TEMP%\QingqiuhuSiliconForge\`，任务结束清理
 - **样本库含真实业务数据，导出前必须提示用户确认**
 - 第三方许可合规（Typst Apache-2.0、pdfium BSD-3、.NET MIT）
 
@@ -665,7 +666,7 @@ md → typst 转换层：标题、段落、强调、列表（嵌套）、表格�
 
 **样本库设计（策略已确定）**：
 
-- 位置：`%APPDATA%\QingqiuSiliconForge\samples\`
+- 位置：`%APPDATA%\QingqiuhuSiliconForge\samples\`
 - 结构：`<日期>_<模块>_<问题类型>/`
   - 默认内容：`output.pdf`、`diagnostics.json`（含源文件哈希、页数、字体嵌入结果、引擎名与版本、软件版本）
   - 用户确认后追加：`source.<ext>`

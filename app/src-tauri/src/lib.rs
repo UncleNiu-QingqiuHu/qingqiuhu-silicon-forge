@@ -55,7 +55,7 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
 }
 
 /// 开机自启：写在 HKCU 的 Run 键下，不需要管理员权限（PRD F6-9）。
-const AUTOSTART_NAME: &str = "QingqiuSiliconForge";
+const AUTOSTART_NAME: &str = "QingqiuhuSiliconForge";
 const AUTOSTART_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 
 #[cfg(windows)]

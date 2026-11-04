@@ -1,6 +1,6 @@
 # 青丘湖硅基工坊
 
-> Qingqiu Silicon Forge — 本地文件加工台
+> Qingqiuhu Silicon Forge — 本地文件加工台
 
 公司内部使用的 Windows 桌面工具。把日常重复的文件加工操作收敛到一个应用里：文档转 PDF、Excel 按工作表拆分、Markdown 写文档导正式稿、图片批量转格式。
 

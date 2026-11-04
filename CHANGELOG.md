@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-04
+
+统一内部标识的拼音写法：品牌名「青丘湖」正确拼音为 `qingqiuhu`，此前代码与文档普遍漏写 `hu`，与已改名的仓库地址不一致。
+
+### 变更
+
+- 应用标识 `productName`：`QingqiuSiliconForge` → `QingqiuhuSiliconForge`（影响安装目录、开始菜单项、卸载登记名）
+- 包名：`qingqiu-silicon-forge` → `qingqiuhu-silicon-forge`（`package.json`、`Cargo.toml`）
+- Rust 库名：`qingqiu_forge_lib` → `qingqiuhu_forge_lib`（`main.rs` 引用同步更新）
+- 可执行文件名：`qingqiu-silicon-forge.exe` → `qingqiuhu-silicon-forge.exe`
+- 开机自启注册表键名：`QingqiuSiliconForge` → `QingqiuhuSiliconForge`
+- 文档与 PRD 中的安装/数据/临时目录路径同步为 `QingqiuhuSiliconForge`
+- `Cargo.toml` 作者字段：`Qingqiu` → `Qingqiuhu`
+
+### 注意
+
+- 已安装旧版本的用户需重新勾选「开机自启」——注册表键名已变，旧键不会自动迁移
+- 应用标识 `identifier`（`com.qingqiuhu.siliconforge`）本就正确，未作改动
+
 ## [0.2.0] - 2026-11-04
 
 ### 新增
